@@ -52,6 +52,7 @@ const ImageGeneratorForm: React.FC = () => {
     client = new OpenAI({
       baseURL: formData.baseURL,
       apiKey: formData.apiKey,
+      dangerouslyAllowBrowser: true
     });
 
     setIsLoading(true);
