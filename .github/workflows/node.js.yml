@@ -1,11 +1,11 @@
-name: Deploy to GitHub Pages
+name: Build for GitHub Pages
 
 on:
   push:
-    branches: [ "main" ] 
+    branches: [ "main" ]
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,12 +17,22 @@ jobs:
         node-version: "18.x"
         cache: "npm"
 
-    - run: npm install 
+    - run: npm install
+    - run: npm run build
 
-    - run: npm run build 
-
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+    # If using root for GitHub Pages
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist 
+        name: production-files
+        path: ./dist
+
+    # Commit the built files to main branch
+    - name: Commit built files
+      run: |
+        git config --global user.name github-actions
+        git config --global user.email github-actions@github.com
+        cp -r dist/* .
+        git add .
+        git commit -m "Update GitHub Pages" || echo "No changes to commit"
+        git push
