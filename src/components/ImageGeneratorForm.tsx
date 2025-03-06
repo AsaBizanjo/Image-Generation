@@ -1,125 +1,101 @@
+import React, { useState } from 'react';
+import OpenAI from 'openai';
+import { toast } from 'sonner';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Loader, Image as ImageIcon } from 'lucide-react';
 
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader, Image as ImageIcon } from "lucide-react";
-import { toast } from "sonner";
-
-interface FormData {
-  prompt: string;
-  endpoint: string;
-  apiKey: string;
-}
+// Declare OpenAI client (will initialize on form submission)
+let client: OpenAI | null = null;
 
 const ImageGeneratorForm: React.FC = () => {
-  const [formData, setFormData] = useState<FormData>({
-    prompt: "",
-    endpoint: "https://api.openai.com/v1/images/generations",
-    apiKey: "",
+  const [formData, setFormData] = useState({
+    apiKey: '',
+    baseURL: 'https://api.openai.com/v1',
+    model: 'dall-e-3', // Default example model
+    prompt: 'sunset between the mountains',
   });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const [isLoading, setIsLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  // Handle form input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
-    if (!formData.prompt.trim()) {
-      toast.error("Please enter a prompt");
-      return;
-    }
-    
+
+    // Input validation
     if (!formData.apiKey.trim()) {
-      toast.error("Please enter your API key");
+      toast.error('Please enter your API key');
       return;
     }
+
+    if (!formData.baseURL.trim()) {
+      toast.error('Please enter a valid Base URL');
+      return;
+    }
+
+    if (!formData.prompt.trim()) {
+      toast.error('Please enter a prompt');
+      return;
+    }
+
+    // Dynamically initialize the OpenAI client
+    client = new OpenAI({
+      baseURL: formData.baseURL,
+      apiKey: formData.apiKey,
+    });
 
     setIsLoading(true);
     setGeneratedImage(null);
 
     try {
-      const response = await fetch(formData.endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${formData.apiKey}`,
-        },
-        body: JSON.stringify({
-          prompt: formData.prompt,
-          n: 1,
-          size: "1024x1024",
-        }),
+      // Generate image with the OpenAI client
+      const response = await client.images.generate({
+        model: formData.model,
+        prompt: formData.prompt,
+        n: 1, // Number of images to generate
+        size: '1024x1024', // Example size
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || "Failed to generate image");
-      }
-
-      if (data.data && data.data[0]?.url) {
-        setGeneratedImage(data.data[0].url);
-        toast.success("Image generated successfully!");
+      // Extract the first image URL from the response
+      if (response.data[0]?.url) {
+        setGeneratedImage(response.data[0].url);
+        toast.success('Image generated successfully!');
       } else {
-        throw new Error("No image URL in the response");
+        throw new Error('No image URL found in the response.');
       }
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to generate image");
+    } catch (error: any) {
+      console.error('Error generating image:', error);
+      toast.error(error.message || 'Failed to generate the image.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 space-y-8">
-      <div className="space-y-2 text-center animate-fade-in">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          AI Image Generator
-        </h1>
-        <p className="text-muted-foreground max-w-xl mx-auto">
-          Create stunning images using AI. Just enter a prompt, your API endpoint, and API key.
+    <div className="max-w-4xl mx-auto p-8 space-y-8">
+      <div className="space-y-4 text-center">
+        <h1 className="text-3xl font-bold">AI Image Generator</h1>
+        <p className="text-muted-foreground">
+          Generate stunning images via your own custom Base URL, API key, and model.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="overflow-hidden border transition-all duration-300 animate-slide-up">
+        {/* Input Form */}
+        <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="prompt">Prompt</Label>
-                <Textarea
-                  id="prompt"
-                  name="prompt"
-                  placeholder="Describe the image you want to generate..."
-                  value={formData.prompt}
-                  onChange={handleChange}
-                  className="min-h-[120px] resize-none"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="endpoint">API Endpoint</Label>
-                <Input
-                  id="endpoint"
-                  name="endpoint"
-                  placeholder="https://api.openai.com/v1/images/generations"
-                  value={formData.endpoint}
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="apiKey">API Key</Label>
                 <Input
                   id="apiKey"
@@ -130,20 +106,45 @@ const ImageGeneratorForm: React.FC = () => {
                   onChange={handleChange}
                 />
               </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full transition-all duration-300 hover:shadow-md"
-                disabled={isLoading}
-              >
+              <div>
+                <Label htmlFor="baseURL">Base URL</Label>
+                <Input
+                  id="baseURL"
+                  name="baseURL"
+                  placeholder="Enter API Base URL"
+                  value={formData.baseURL}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="model">Model</Label>
+                <Input
+                  id="model"
+                  name="model"
+                  placeholder="Enter model name (e.g., image-alpha-001)"
+                  value={formData.model}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="prompt">Prompt</Label>
+                <Textarea
+                  id="prompt"
+                  name="prompt"
+                  placeholder="Describe the image you'd like to generate..."
+                  value={formData.prompt}
+                  onChange={handleChange}
+                />
+              </div>
+              <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? (
                   <>
-                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader className="h-4 w-4 mr-2 animate-spin" />
                     Generating...
                   </>
                 ) : (
                   <>
-                    <ImageIcon className="mr-2 h-4 w-4" />
+                    <ImageIcon className="h-4 w-4 mr-2" />
                     Generate Image
                   </>
                 )}
@@ -152,46 +153,35 @@ const ImageGeneratorForm: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className={`overflow-hidden border transition-all duration-300 animate-slide-up delay-100 ${!generatedImage && !isLoading ? 'flex items-center justify-center min-h-[300px]' : ''}`}>
-          <CardContent className="p-6 flex flex-col items-center justify-center h-full">
+        {/* Result Card */}
+        <Card>
+          <CardContent className="p-6 h-full flex justify-center items-center">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center space-y-4 py-10">
-                <div className="relative w-16 h-16">
-                  <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin"></div>
-                </div>
-                <p className="text-muted-foreground">Generating your image...</p>
+              <div className="flex flex-col items-center">
+                <Loader className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p>Generating your image...</p>
               </div>
             ) : generatedImage ? (
-              <div className="w-full animate-zoom-in">
-                <div className="relative aspect-square w-full overflow-hidden rounded-lg border bg-muted">
-                  <img
-                    src={generatedImage}
-                    alt="Generated image"
-                    className="h-full w-full object-cover transition-all"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="mt-4 flex justify-center">
+              <div className="space-y-4">
+                <img
+                  src={generatedImage}
+                  alt="Generated"
+                  className="max-w-full rounded-lg border"
+                  loading="lazy"
+                />
+                <div className="text-center">
                   <Button
                     variant="outline"
-                    onClick={() => window.open(generatedImage, "_blank")}
-                    className="transition-all duration-300"
+                    onClick={() => window.open(generatedImage || '', '_blank')}
                   >
-                    View Full Size
+                    Open Full Image
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="text-center space-y-4 py-10">
-                <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground">
-                    Your generated image will appear here
-                  </p>
-                </div>
-              </div>
+              <p className="text-center text-muted-foreground">
+                Your generated image will appear here after submission.
+              </p>
             )}
           </CardContent>
         </Card>
