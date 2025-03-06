@@ -28,9 +28,21 @@ const Index = () => {
       
       <footer className="border-t py-6 md:py-0">
         <div className="container flex flex-col items-center justify-between gap-4 md:h-14 md:flex-row">
-          <p className="text-center text-sm text-muted-foreground md:text-left">
-            &copy; {new Date().getFullYear()} AI Image Generator. All rights reserved.
-          </p>
+          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+            <p className="text-center text-sm text-muted-foreground md:text-left">
+              &copy; {new Date().getFullYear()} AI Image Generator. All rights reserved.
+            </p>
+            <p className="text-center text-sm text-muted-foreground md:text-left">
+              Made by <a 
+                href="https://github.com/AsaBizanjo" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-medium underline hover:text-foreground"
+              >
+                Asa Bizanjo
+              </a>
+            </p>
+          </div>
           <div className="flex items-center">
             <span className="text-sm text-muted-foreground mr-2">Theme:</span>
             <ThemeToggle />
