@@ -1,6 +1,7 @@
 
 import React from "react";
 import ImageGeneratorForm from "@/components/ImageGeneratorForm";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Index = () => {
   return (
@@ -30,6 +31,10 @@ const Index = () => {
           <p className="text-center text-sm text-muted-foreground md:text-left">
             &copy; {new Date().getFullYear()} AI Image Generator. All rights reserved.
           </p>
+          <div className="flex items-center">
+            <span className="text-sm text-muted-foreground mr-2">Theme:</span>
+            <ThemeToggle />
+          </div>
         </div>
       </footer>
     </div>
